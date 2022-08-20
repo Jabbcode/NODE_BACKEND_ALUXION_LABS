@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
+const { transporter } = require('../config/mailer')
 const { generarJWT } = require('../helpers/jwt')
 const User = require('../models/User')
 
@@ -110,7 +111,15 @@ const forgetPassword = async (req, res) => {
 
         userDB.resetToken = token
 
-        //TODO: Enviar Email
+        await transporter.sendMail({
+            from: 'Forget Password - Sistema de archivos',
+            to: userDB.email,
+            subject: 'Forget Password',
+            html: `
+            <b>Porfavor clique en el siguiente enlace o copielo y peguelo en su navegador para terminar el proceso</b>
+            <a href="${verificationLink}">${verificationLink}<a/>
+            `,
+        })
 
         await userDB.save()
 
