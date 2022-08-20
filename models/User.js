@@ -1,8 +1,9 @@
 const { Schema, model } = require('mongoose')
 
 const UserSchema = Schema({
-    name: {
-        type: String
+    username: {
+        type: String,
+        unique: true
     },
     email: {
         type: String,
@@ -11,6 +12,9 @@ const UserSchema = Schema({
     password: {
         type: String,
         require: true
+    },
+    resetToken: {
+        type: String
     }
 })
 

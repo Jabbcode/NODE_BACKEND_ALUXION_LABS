@@ -1,4 +1,6 @@
 const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
+const { generarJWT } = require('../helpers/jwt')
 const User = require('../models/User')
 
 const login = async (req, res) => {
@@ -23,14 +25,14 @@ const login = async (req, res) => {
             })
         }
 
-        // const token = await generarJWT(userDB.id, userDB.name)
+        const token = await generarJWT(userDB.id, userDB.username)
 
         res.json({
             ok: true,
             user: {
                 uid: userDB.id,
-                name: userDB.name,
-                // token,
+                username: userDB.username,
+                token,
             },
         })
     } catch (error) {
@@ -62,14 +64,14 @@ const register = async (req, res) => {
 
         await newUser.save()
 
-        // const token = await generarJWT(newUser.id, newUser.name)
+        const token = await generarJWT(newUser.id, newUser.username)
 
         res.status(201).json({
             ok: true,
             user: {
-                name: newUser.name,
+                username: newUser.username,
                 email: newUser.email,
-                // token,
+                token,
             },
         })
     } catch (error) {
@@ -81,10 +83,96 @@ const register = async (req, res) => {
     }
 }
 
-const forgetPassword = (req, res) => {}
+const forgetPassword = async (req, res) => {
+    const { email } = req.body
+
+    if (!email) {
+        return res
+            .status(400)
+            .json({ ok: false, msg: 'El username es requerido' })
+    }
+
+    const msg = 'Revise su correo y entre al link para recuperar su contraseña'
+    let emailStatus = 'Ok'
+
+    try {
+        let userDB = await User.findOne({ email })
+
+        if (!userDB) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'Algo malo ha ocurrido',
+            })
+        }
+        const token = await generarJWT(userDB.id, userDB.username)
+
+        let verificationLink = `http://localhost:4000/new-password/${token}`
+
+        userDB.resetToken = token
+
+        //TODO: Enviar Email
+
+        await userDB.save()
+
+        return res.json({
+            ok: true,
+            info: emailStatus,
+            msg,
+        })
+    } catch (error) {
+        emailStatus = error
+        res.status(400).json({
+            ok: false,
+            msg,
+        })
+    }
+}
+
+const newPassword = async (req, res) => {
+    const { newPassword } = req.body
+    const resetToken = req.headers['reset']
+    const SECRET_JWT = process.env.SECRET_JWT
+
+    if (!(resetToken && newPassword)) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'Todos los campos son requeridos',
+        })
+    }
+
+    try {
+        const { uid } = jwt.verify(resetToken, SECRET_JWT)
+
+        const userDB = await User.findOne({ uid })
+
+        if (!userDB) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'Algo no ha ido bien',
+            })
+        }
+
+        const salt = bcrypt.genSaltSync()
+        userDB.password = bcrypt.hashSync(newPassword, salt)
+
+        await userDB.save()
+
+        res.status(200).json({
+            ok: true,
+            msg: 'Contraseña cambiada correctamente',
+        })
+    } catch (error) {
+        console.log(error)
+        return res.status(401).json({
+            ok: false,
+            msg: 'Algo no ha ido bien',
+        })
+    }
+}
 
 module.exports = {
     login,
     register,
     forgetPassword,
+    newPassword,
 }
