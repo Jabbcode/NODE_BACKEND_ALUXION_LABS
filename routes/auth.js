@@ -1,6 +1,11 @@
 const { Router } = require('express')
 const { check } = require('express-validator')
-const { login, register, forgetPassword, newPassword } = require('../controllers/auth')
+const {
+    login,
+    register,
+    forgetPassword,
+    newPassword,
+} = require('../controllers/auth')
 const { validarCampos } = require('../middlewares/validar-campos')
 const router = Router()
 
@@ -33,8 +38,26 @@ router.post(
     register
 )
 
-router.put('/forget-password', validarCampos, forgetPassword)
+router.put(
+    '/forget-password',
+    [
+        check('email', 'El correo electronico es obligatorio').isEmail(),
+        validarCampos,
+    ],
+    forgetPassword
+)
 
-router.put('/new-password', validarCampos, newPassword)
+router.put(
+    '/new-password',
+    [
+        check('newPassword', 'la contraseña es obligatoria').not().isEmpty(),
+        check(
+            'newPassword',
+            'La constraseña debe contener minimo 6 caracteres'
+        ).isLength(6),
+        validarCampos,
+    ],
+    newPassword
+)
 
 module.exports = router

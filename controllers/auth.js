@@ -107,7 +107,7 @@ const forgetPassword = async (req, res) => {
         }
         const token = await generarJWT(userDB.id, userDB.username)
 
-        let verificationLink = `http://localhost:4000/new-password/${token}`
+        let verificationLink = `http://localhost:5000/new-password/${token}`
 
         userDB.resetToken = token
 
